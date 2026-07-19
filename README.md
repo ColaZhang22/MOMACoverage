@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/momacoverage-title.png" alt="MOMACoverage" width="760">
-</p>
+![MOMACoverage title](./assets/momacoverage-title.png)
 
 # MOMACoverage
 
