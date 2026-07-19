@@ -1,0 +1,11 @@
+defaults:
+  - momix_config
+  - _self_
+
+mixing_embed_dim: 32
+delay_value: True
+loss_function: "l2"
+n_discrete_actions: 8
+action_scale: 1.0
+preference_repeat_factor: 5
+discretize_continuous_actions: True

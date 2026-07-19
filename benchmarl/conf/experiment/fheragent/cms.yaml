@@ -1,0 +1,20 @@
+defaults:
+  - base_experiment  
+
+max_n_frames: 1000_000
+
+on_policy_n_envs_per_worker: 2
+on_policy_collected_frames_per_batch: 1000 
+off_policy_n_envs_per_worker: 2
+off_policy_collected_frames_per_batch: 1000
+evaluation_episodes: 16
+lr: 0.00001
+evaluation_interval: 20_000
+parallel_collection: True
+evaluation_deterministic_actions: False
+checkpoint_interval: 100_000
+
+sampling_device: "cpu" 
+train_device: "cuda"
+buffer_device: "cuda"
+render: false

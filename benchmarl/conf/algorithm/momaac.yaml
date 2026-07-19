@@ -1,0 +1,13 @@
+defaults:
+  - momaac_config
+  - _self_
+
+variant: "td3"
+actor_hidden_sizes: [256, 256]
+critic_hidden_sizes: [256, 256]
+loss_function: "smooth_l1"
+policy_delay: 2
+target_policy_noise: 0.2
+target_noise_clip: 0.5
+exploration_noise: 0.2
+exploration_noise_end: 0.05

@@ -1,0 +1,32 @@
+defaults:
+  - pcma_config
+  - _self_
+
+# Shared preference-conditioned action actor.
+actor_hidden_sizes: [64, 64]
+preference_embedding_dim: 32
+agent_embedding_dim: 8
+min_action_scale: 0.0001
+
+# Agent-specific Dirichlet preference planner.
+planner_hidden_sizes: [64, 64]
+alpha_min: 0.05
+alpha_max: 100
+diversity_coef: 0.02
+planner_entropy_coef: 0.001
+
+# Ablation: bypass the preference planner and condition every actor directly
+# on the global user preference. Set to false to restore full PCMA.
+use_global_preference_as_local: true
+
+# Central team-vector and agent-wise vector critics.
+critic_hidden_sizes: [128, 128]
+critic_coef: 1
+loss_critic_type: "l2"
+
+# PPO and vector-GAE settings.
+clip_epsilon: 0.2
+entropy_coef: 0.001
+individual_advantage_coef: 0.2
+lmbda: 0.95
+normalize_advantage: true

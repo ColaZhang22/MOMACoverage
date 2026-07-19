@@ -1,0 +1,12 @@
+# Path of the Environment
+env_path: "E:\\Pythoncode\\UnityProject\\ml-agents-release_20_docs\\Project\\CMSEmpty256\\UnityEnvironment"
+max_steps: 1500
+width: 1600
+height: 1000
+time_scale: 5.0
+n_agents: 4
+manual_metrics_size: 5
+render: True
+debug_save_sensor: true
+debug_save_every_n: 20
+debug_sensor_dir: "debug_sensor_frames/cmsempty256"
