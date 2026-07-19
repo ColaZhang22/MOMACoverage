@@ -1,6 +1,6 @@
-![MOMACoverage title](./assets/momacoverage-title.png)
-
 # MOMACoverage
+
+![MOMACoverage title](./assets/icon.png)
 
 MOMACoverage extends [BenchMARL](https://github.com/facebookresearch/BenchMARL) 1.5.1 with a Unity ML-Agents environment for studying bi-objective decision-making in multi-agent coverage tasks. The objective is to maximize exploration coverage while minimizing the total path length traveled by the team. This repository includes training and evaluation code, Weights & Biases (W&B) logging, Pareto metric computation, publication plotting utilities, cross-agent-count transfer experiments, and unseen-map generalization experiments.
 
