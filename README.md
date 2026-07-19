@@ -1,60 +1,12 @@
-# MOMACoverage
-
 ![MOMACoverage title](./assets/icon.png)
 
-MOMACoverage extends [BenchMARL](https://github.com/facebookresearch/BenchMARL) 1.5.1 with a Unity ML-Agents environment for studying bi-objective decision-making in multi-agent coverage tasks. The objective is to maximize exploration coverage while minimizing the total path length traveled by the team. This repository includes training and evaluation code, Weights & Biases (W&B) logging, Pareto metric computation, publication plotting utilities, cross-agent-count transfer experiments, and unseen-map generalization experiments.
+## Overview 🧐
 
-> **Current status:** The experiment code and result-analysis scripts are included in this repository. The Unity environment executables are not distributed with it. Before running an experiment, obtain the appropriate Unity build separately and update `env_path` in the task YAML file.
+MOMACoverage is a MOMARL benchmark for continuous cooperative multi-agent exploration with two intrinsic conflicting objectives, map coverage and path length. Agents in MOMACoverage need to cooperatively maximize environment coverage while minimizing the mean path length. 
 
-![MOMACoverage motivation](figures/momaexplore_motivation.png)
+MOMACoverage is build upon on [BenchMARL](https://github.com/facebookresearch/BenchMARL) 1.5.1 with a Unity [ML-Agents toolkit](https://github.com/unity-technologies/ml-agents).
 
-## Experiment workflow
-
-```mermaid
-flowchart LR
-    A[Unity MOMACoverage] --> B[SARWrapper]
-    B --> C[Observations, preferences, and bi-objective rewards]
-    C --> D[Multi-algorithm, multi-task, multi-seed training]
-    D --> E[Evaluation every 20k steps with CSV / W&B logging]
-    E --> F[GEU, C, HV, S, and PAS]
-    F --> G[Pareto fronts and learning curves]
-    D --> H[Cross-agent-count transfer]
-    D --> I[Unseen-map generalization]
-```
-
-## 1. Problem formulation
-
-MOMACoverage is a continuous-control, multi-agent coverage task. The main experiments use four agents and a maximum episode length of 500 steps. The environment wrapper is implemented in `benchmarl/environments/sar/sarwrapper.py`.
-
-### Bi-objective reward
-
-Each agent receives a two-dimensional reward vector:
-
-```text
-r_vector = [exploration_gain, path_penalty]
-```
-
-- `exploration_gain`: the Unity environment reward, scaled by `0.1` and shared using the maximum value across the team.
-- `path_penalty`: the negative path-length increment for each agent; shorter paths are better.
-- Scalarized training reward: `r = w · r_vector`.
-- Preference vector: `w = [u, 1-u]`, where `u ∈ [0, 1]`.
-
-During training, `u` is sampled uniformly from `u_sample_start` to 1. The main task configurations set `u_sample_start: 0`, covering the full preference range. During evaluation, parallel environments are assigned evenly spaced preferences.
-
-### Observations and hand-crafted metrics
-
-Visual observations are downsampled to `16 × 16` grayscale features and concatenated with vector observations. The current Unity build produces a state vector of approximately 301 dimensions. Six hand-crafted metrics are also recorded for each episode:
-
-| Index | Metric |
-|---:|---|
-| 0 | `DeltaPathLengthObs` |
-| 1 | `StepCount` |
-| 2 | `PathLength` |
-| 3 | `CollisionWallCount` |
-| 4 | `CollisionAgentCount` |
-| 5 | `ExplorationRatio` |
-
-Pareto points are defined as:
+Pareto points in MOMACoverage are defined as:
 
 ```text
 F = [ExplorationRatio, -PathLength]
@@ -62,76 +14,45 @@ F = [ExplorationRatio, -PathLength]
 
 Both dimensions are treated as maximization objectives.
 
-## 2. Tasks and algorithms
 
-### Task configurations
+1️⃣ Installation
 
-| Experiment | Hydra task | Agents | Normalization anchors |
-|---|---|---:|---|
-| Main Room task | `sar/moroom128cpu` | 4 | `[[105, 0], [0, -1100]]` |
-| Main Maze task | `sar/momaze128cpu` | 4 | `[[105, 0], [0, -1000]]` |
-| Main Empty task | `sar/moempty128cpu` | 4 | `[[105, 0], [0, -1100]]` |
-| Room transfer | `moroom128cpu3a` | 3 | `[[105, 0], [0, -1100]]` |
-| Room transfer | `moroom128cpu2a` | 2 | `[[105, 0], [0, -1100]]` |
-| Map generalization | `morandom128cpu` | 4 | `[[105, 0], [0, -1100]]` |
-| Map generalization | `moden128cpu` | 4 | `[[105, 0], [0, -1100]]` |
-| Map generalization | `moden3128cpu` | 4 | `[[105, 0], [0, -1100]]` |
+```cmd
+# Clone the repository
+git clone https://github.com/ColaZhang22/MOMACoverage.git
+cd MOMACoverage
+```
 
-All task YAML files are located in `benchmarl/conf/task/sar/`.
+```cmd
+# Create conda environment
+conda create -n MOMACoverage python=3.10 -y
+conda activate MOMACoverage
 
-### Paper names and configuration names
+pip install -r requirements.txt
+```
 
-| Name used in the README/paper | `algorithm=` | Type | Description |
-|---|---|---|---|
-| PCMAPPO | `cmomappo` | On-policy | Preference-conditioned MAPPO |
-| PCMA | `pcma` | On-policy | Global/local preference coordination policy |
-| MOMA-AC | `momaac` | Off-policy | TD3-style multi-objective actor-critic |
-| Outer-loop MOMAPPO | `mappo` | On-policy | Outer-loop, single-preference baseline |
-| MASAC | `masac` | Off-policy | Multi-agent SAC baseline |
-| IP | `ippo` | On-policy | Independent PPO baseline |
 
-The repository also implements `momasac`, `momagpipd`, and `momix`, although they are not included in the current six-algorithm Room/Maze figures. `momagpipd` has not yet been registered in Hydra's global algorithm registry and must be loaded from Python as described in its configuration file.
+2️⃣ Downlaod Maps and Add Path to Yaml file
 
-Pay particular attention to the following option in the PCMA configuration:
+Unity builds are not included in this repository, please download `maps` from the following link: [Google Drive](https://drive.google.com/drive/folders/1SGUg8nzm18HtZm1xMEH6AjKDcpDwedAp?usp=drive_link).
 
+Open `benchmarl/conf/task/sar/xxx.yaml` and update the env_path field:
 ```yaml
-use_global_preference_as_local: true
+env_path:  fill the downloaded env path, such as "E:\\PythonCode\\MOCMSENV\\MOROOM128CPU\\UnityEnvironment"
 ```
 
-The saved PCMA experiments use `true`, meaning that every actor receives the global preference directly. Set it to `false` to enable the full agent-specific Dirichlet preference planner.
+### Current Task in MAMOCoverage
 
-## 3. Installation
-
-The primary experiment environment snapshot uses Python 3.10, ML-Agents 0.28.0, TorchRL 0.10.1, and PyTorch 2.5.1 with CUDA 12.1:
-
-```powershell
-conda env create -f environment.yml
-conda activate benchmarl
-python -m pip install -e . --no-deps
-```
-
-Before using this environment on another machine, note the following:
-
-1. The last line of `environment.yml` contains an absolute `prefix` from the original machine. Remove that line if necessary.
-2. `environment.yml` uses PyTorch 2.5.1 with CUDA 12.1, whereas `requirements.txt` captures a separate environment using PyTorch 2.8.0 with CUDA 12.6. Choose one dependency set; do not install both sequentially into the same environment.
-3. For CPU-only systems or other CUDA versions, install the appropriate PyTorch build for the local driver first, then install the remaining dependencies.
-4. Install the local source in editable mode. Otherwise, Python may import BenchMARL 1.5.1 from PyPI, which does not contain the MOMACoverage changes.
-
-To use W&B, authenticate once with:
-
-```powershell
-wandb login
-```
-
-To train without W&B, add `--no-wandb` when using the manual training entry point.
-
-## 4. Unity environment setup
-
-Unity builds are not included in this repository. The current YAML files use machine-specific paths similar to:
-
-```yaml
-env_path: "E:\\PythonCode\\MOCMSENV\\MOROOM128CPU\\UnityEnvironment"
-```
+| Experiment         | Hydra task          | Agents | Normalization anchors    |
+| ------------------ | ------------------- | ------ | ------------------------ |
+| Main Room task     | `sar/moroom128cpu`  | 4      | `[[105, 0], [0, -1100]]` |
+| Main Maze task     | `sar/momaze128cpu`  | 4      | `[[105, 0], [0, -1000]]` |
+| Main Empty task    | `sar/moempty128cpu` | 4      | `[[105, 0], [0, -1100]]` |
+| Room transfer      | `moroom128cpu3a`    | 3      | `[[105, 0], [0, -1100]]` |
+| Room transfer      | `moroom128cpu2a`    | 2      | `[[105, 0], [0, -1100]]` |
+| Map generalization | `morandom128cpu`    | 4      | `[[105, 0], [0, -1100]]` |
+| Map generalization | `moden128cpu`       | 4      | `[[105, 0], [0, -1100]]` |
+| Map generalization | `moden3128cpu`      | 4      | `[[105, 0], [0, -1100]]` |
 
 Update the appropriate file under `benchmarl/conf/task/sar/`, or override the path temporarily through the manual training entry point:
 
@@ -147,21 +68,19 @@ Headless training is controlled by `render: false` in the task configuration. Th
 
 ## 5. Training
 
-### Run a smoke test first
 
-Start with a serial environment and disable evaluation and W&B to verify the Unity path, observation dimensions, and action interface:
+## Tasks and algorithms
+MOMAcoverage supports both MARL and MOMARL algorithm, and has intergrated several classical MOMARL algorithm into framework. 
 
-```powershell
-python scripts/train_sar_manual.py `
-  --algorithm cmomappo `
-  --task moroom128cpu `
-  --seed 0 `
-  --frames 4000 `
-  --serial `
-  --no-wandb `
-  --checkpoint-interval 0 `
-  --override evaluation=false
-```
+| Name used in the README/paper | `algorithm=` | Type       | Description                                 |
+| ----------------------------- | ------------ | ---------- | ------------------------------------------- |
+| PCMAPPO                       | `cmomappo`   | On-policy  | Preference-conditioned MAPPO                |
+| PCMA                          | `pcma`       | On-policy  | Global/local preference coordination policy |
+| MOMA-AC                       | `momaac`     | Off-policy | TD3-style multi-objective actor-critic      |
+| Outer-loop MOMAPPO            | `mappo`      | On-policy  | Outer-loop, single-preference baseline      |
+| MASAC                         | `masac`      | Off-policy | Multi-agent SAC baseline                    |
+| IP                            | `ippo`       | On-policy  | Independent PPO baseline                    |
+
 
 ### Main experiments
 
@@ -197,22 +116,24 @@ foreach ($algorithm in $algorithms) {
 
 The main settings in `benchmarl/conf/experiment/sar/cms.yaml` are:
 
-| Parameter | Value |
-|---|---:|
-| Total environment steps | 1,000,000 |
-| Learning rate | `5e-5` |
-| Discount factor | `0.99` |
-| Collection / replay device | CPU / CPU |
-| Training device | CUDA |
-| Parallel collection environments | 8 |
-| Frames collected per batch | 4,000 |
-| On-policy minibatches | 500 × 15 epochs |
-| Off-policy updates | 300 per batch, batch size 256 |
-| Replay buffer | 250,000; earlier saved runs used 200,000 or 300,000 |
-| Evaluation interval | 20,000 steps |
-| Evaluation workload | 8 episodes × 8 rollout rounds |
-| Checkpoints | Every 200,000 steps; keep the latest 2 |
-| Logging | CSV + W&B, `project="aaai"` |
+
+| Parameter                        | Value                                               |
+| -------------------------------- | --------------------------------------------------- |
+| Total environment steps          | 1,000,000                                           |
+| Learning rate                    | `5e-5`                                              |
+| Discount factor                  | `0.99`                                              |
+| Collection / replay device       | CPU / CPU                                           |
+| Training device                  | CUDA                                                |
+| Parallel collection environments | 8                                                   |
+| Frames collected per batch       | 4,000                                               |
+| On-policy minibatches            | 500 × 15 epochs                                     |
+| Off-policy updates               | 300 per batch, batch size 256                       |
+| Replay buffer                    | 250,000; earlier saved runs used 200,000 or 300,000 |
+| Evaluation interval              | 20,000 steps                                        |
+| Evaluation workload              | 8 episodes × 8 rollout rounds                       |
+| Checkpoints                      | Every 200,000 steps; keep the latest 2              |
+| Logging                          | CSV + W&B, `project="aaai"`                         |
+
 
 On resource-constrained machines, use `scripts/train_sar_manual.py --serial`, or reduce `on_policy_n_envs_per_worker`, `off_policy_n_envs_per_worker`, and the evaluation parallelism.
 
@@ -237,13 +158,15 @@ Keep `config.pkl` and its checkpoint in the same relative directory layout. The 
 
 The metrics are implemented in `benchmarl/evaluations/mo_metrics.py`.
 
-| Abbreviation | Metric | Direction | Computation |
-|---|---|---:|---|
-| GEU | Global Expected Utility | ↑ | `eval/agents/reward/episode_reward_mean` |
-| C | Pareto Cardinality | ↑ | Number of non-dominated points |
-| HV | Normalized Hypervolume | ↑ | Min-max normalized, with reference point `[-0.05, -0.05]` |
-| S | Schott Sparsity | ↓ | Non-uniformity of the Pareto-point distribution |
-| PAS | Preference Alignment Score | ↑ | Spearman correlation between preference `u` and normalized arc-length rank along the front |
+
+| Abbreviation | Metric                     | Direction | Computation                                                                                |
+| ------------ | -------------------------- | --------- | ------------------------------------------------------------------------------------------ |
+| GEU          | Global Expected Utility    | ↑         | `eval/agents/reward/episode_reward_mean`                                                   |
+| C            | Pareto Cardinality         | ↑         | Number of non-dominated points                                                             |
+| HV           | Normalized Hypervolume     | ↑         | Min-max normalized, with reference point `[-0.05, -0.05]`                                  |
+| S            | Schott Sparsity            | ↓         | Non-uniformity of the Pareto-point distribution                                            |
+| PAS          | Preference Alignment Score | ↑         | Spearman correlation between preference `u` and normalized arc-length rank along the front |
+
 
 The primary W&B keys are:
 
@@ -262,14 +185,18 @@ The Pareto table contains at least:
 preference_u, exploration_ratio, neg_path_length
 ```
 
+
+
 ## 7. Exporting W&B data and plotting results
 
 Export the aggregated learning-curve CSV files and Pareto-table CSV files from W&B. The current scripts expect the following filenames:
 
-| Scenario | GEU | C | HV | Pareto front |
-|---|---|---|---|---|
-| Room | `guroom.csv` | `croom.csv` | `hvroom.csv` | `pareto fronter room.csv` |
-| Maze | `guemaze.csv` | `cmaze.csv` | `nhvmaze.csv` | `pareto front maze.csv` |
+
+| Scenario | GEU           | C           | HV            | Pareto front              |
+| -------- | ------------- | ----------- | ------------- | ------------------------- |
+| Room     | `guroom.csv`  | `croom.csv` | `hvroom.csv`  | `pareto fronter room.csv` |
+| Maze     | `guemaze.csv` | `cmaze.csv` | `nhvmaze.csv` | `pareto front maze.csv`   |
+
 
 Place the CSV files under `scripts/`. The learning-curve scripts multiply W&B's iteration `Step` by 4,000 to recover the number of environment steps. Columns ending in `__MIN` and `__MAX` are used as the lower and upper bounds of the shaded region.
 
@@ -316,7 +243,7 @@ python scripts/plot_room_pcma_cmomappo_hv_pas_diagnostic.py
 
 Preview of the current main Room results:
 
-![Room main results](outputs/room_gu_c_hv_pareto_1x4.png)
+Room main results
 
 ## 8. Cross-agent-count transfer
 
@@ -370,17 +297,19 @@ The following values come directly from the aggregated results saved in the repo
 
 ### Room: transfer of a four-agent actor across agent counts
 
-| Setting | Algorithm | HV ↑ | C ↑ | GEU ↑ | PAS ↑ |
-|---|---|---:|---:|---:|---:|
-| Room 4A | PCMAPPO | 0.66 ± 0.08 | 28.67 ± 2.00 | 1.72 ± 0.87 | 0.91 ± 0.03 |
-| Room 4A | PCMA | **0.78 ± 0.03** | 21.33 ± 1.50 | **2.06 ± 0.05** | 0.62 ± 0.17 |
-| Room 4A | MOMA-AC | 0.39 ± 0.08 | 27.00 ± 4.50 | 0.80 ± 0.58 | 0.60 ± 0.24 |
-| Room 3A | PCMAPPO | 0.49 ± 0.05 | 6.00 ± 1.00 | -7.38 ± 1.07 | -0.02 ± 0.16 |
-| Room 3A | PCMA | **0.61 ± 0.24** | **24.67 ± 6.43** | **-1.03 ± 0.94** | **0.62 ± 0.18** |
-| Room 3A | MOMA-AC | 0.30 ± 0.02 | 19.67 ± 4.51 | -2.19 ± 1.12 | 0.52 ± 0.30 |
-| Room 2A | PCMAPPO | **0.44 ± 0.03** | 11.00 ± 1.73 | -5.73 ± 5.06 | -0.08 ± 0.10 |
-| Room 2A | PCMA | 0.41 ± 0.08 | **21.67 ± 3.06** | **-0.90 ± 0.32** | **0.55 ± 0.13** |
-| Room 2A | MOMA-AC | 0.24 ± 0.01 | 17.00 ± 1.73 | -2.45 ± 2.25 | 0.52 ± 0.16 |
+
+| Setting | Algorithm | HV ↑            | C ↑              | GEU ↑            | PAS ↑           |
+| ------- | --------- | --------------- | ---------------- | ---------------- | --------------- |
+| Room 4A | PCMAPPO   | 0.66 ± 0.08     | 28.67 ± 2.00     | 1.72 ± 0.87      | 0.91 ± 0.03     |
+| Room 4A | PCMA      | **0.78 ± 0.03** | 21.33 ± 1.50     | **2.06 ± 0.05**  | 0.62 ± 0.17     |
+| Room 4A | MOMA-AC   | 0.39 ± 0.08     | 27.00 ± 4.50     | 0.80 ± 0.58      | 0.60 ± 0.24     |
+| Room 3A | PCMAPPO   | 0.49 ± 0.05     | 6.00 ± 1.00      | -7.38 ± 1.07     | -0.02 ± 0.16    |
+| Room 3A | PCMA      | **0.61 ± 0.24** | **24.67 ± 6.43** | **-1.03 ± 0.94** | **0.62 ± 0.18** |
+| Room 3A | MOMA-AC   | 0.30 ± 0.02     | 19.67 ± 4.51     | -2.19 ± 1.12     | 0.52 ± 0.30     |
+| Room 2A | PCMAPPO   | **0.44 ± 0.03** | 11.00 ± 1.73     | -5.73 ± 5.06     | -0.08 ± 0.10    |
+| Room 2A | PCMA      | 0.41 ± 0.08     | **21.67 ± 3.06** | **-0.90 ± 0.32** | **0.55 ± 0.13** |
+| Room 2A | MOMA-AC   | 0.24 ± 0.01     | 17.00 ± 1.73     | -2.45 ± 2.25     | 0.52 ± 0.16     |
+
 
 These results show that PCMA maintains relatively high Pareto cardinality, GEU, and preference alignment after the agent count changes. PCMAPPO achieves the highest HV in the two-agent Room setting, but its C, GEU, and PAS decrease substantially.
 
@@ -391,6 +320,8 @@ These results show that PCMA maintains relatively high Pareto cardinality, GEU, 
 - **Den3~128:** PCMAPPO has the highest mean HV (`0.63`), while MOMA-AC has the highest C (`31.33`) and PAS (`0.45`).
 - See `outputs/map_generalization/map_generalization_3seed_summary.json` for all values and per-run results.
 
+
+
 ## 11. Reproducibility notes
 
 1. **The recorded random seeds are not fully consistent.** Among the main saved Room artifacts, PCMA uses seeds `0/42/1234`, MOMA-AC uses `0/42/3408`, and the three saved PCMAPPO runs use `0/0/3408`, including a duplicate seed 0. The existing PCMAPPO aggregate should therefore be described as three runs, not three unique seeds. For new experiments, use the same set of unique seeds for every algorithm.
@@ -399,20 +330,26 @@ These results show that PCMA maintains relatively high Pareto cardinality, GEU, 
 4. **Unity worker ports can conflict.** If the environment fails to reconnect after an abnormal exit, terminate any remaining Unity environment processes before running a serial smoke test.
 5. **Windows paths are machine-specific.** When sharing a checkpoint, also share its task YAML, `config.pkl`, and normalization anchors.
 
+
+
 ## 12. Repository guide
 
-| Path | Description |
-|---|---|
-| `benchmarl/environments/sar/` | Unity wrapper, task classes, and preference sampling |
-| `benchmarl/algorithms/` | PCMA, PCMAPPO, MOMA-AC/SAC/GPI-PD, and other algorithms |
-| `benchmarl/conf/task/sar/` | Room, Maze, Empty, transfer, and generalization task configurations |
-| `benchmarl/conf/algorithm/` | Algorithm hyperparameters |
-| `benchmarl/conf/experiment/sar/cms.yaml` | Main experiment configuration |
-| `benchmarl/evaluations/mo_metrics.py` | Pareto, HV, C, and S metrics |
-| `scripts/train_sar_manual.py` | Training entry point without Hydra |
-| `scripts/evaluate_sar_cross_agents.py` | Actor-only evaluation across agent counts and maps |
-| `scripts/` | W&B CSV files, PAS computation, and paper plotting scripts |
-| `outputs/` | Hydra outputs, evaluation summaries, and generated figures |
+
+| Path                                     | Description                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| `benchmarl/environments/sar/`            | Unity wrapper, task classes, and preference sampling                |
+| `benchmarl/algorithms/`                  | PCMA, PCMAPPO, MOMA-AC/SAC/GPI-PD, and other algorithms             |
+| `benchmarl/conf/task/sar/`               | Room, Maze, Empty, transfer, and generalization task configurations |
+| `benchmarl/conf/algorithm/`              | Algorithm hyperparameters                                           |
+| `benchmarl/conf/experiment/sar/cms.yaml` | Main experiment configuration                                       |
+| `benchmarl/evaluations/mo_metrics.py`    | Pareto, HV, C, and S metrics                                        |
+| `scripts/train_sar_manual.py`            | Training entry point without Hydra                                  |
+| `scripts/evaluate_sar_cross_agents.py`   | Actor-only evaluation across agent counts and maps                  |
+| `scripts/`                               | W&B CSV files, PAS computation, and paper plotting scripts          |
+| `outputs/`                               | Hydra outputs, evaluation summaries, and generated figures          |
+
+
+
 
 ## Acknowledgments and license
 
