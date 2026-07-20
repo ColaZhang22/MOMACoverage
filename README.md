@@ -1,4 +1,5 @@
-MOMACoverage title
+![MOMACoverage title](/assets/icon.png)
+
 
 ## Overview 🧐
 
@@ -6,7 +7,8 @@ MOMACoverage is a MOMARL benchmark for continuous cooperative multi-agent explor
 
 MOMACoverage is build upon on [BenchMARL](https://github.com/facebookresearch/BenchMARL) 1.5.1 with a Unity [ML-Agents toolkit](https://github.com/unity-technologies/ml-agents).
 
-MOMACoverage Overview
+
+![MOMACoverage Overview](/assets/Overview.png)
 
 ## 1️⃣ Quick Installation
 
